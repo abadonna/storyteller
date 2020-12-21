@@ -11,6 +11,7 @@ type Game struct {
 	Rooms      map[string]Spacer
 	Actions    []Action
 	IsFinished bool
+	Input      string
 }
 
 //Adventurer interface for the game context
@@ -59,6 +60,8 @@ func Process(game Adventurer, command string) string {
 }
 
 func executeCommand(game Adventurer, command string) string {
+	game.BasicGame().Input = command
+
 	room := game.CurrentRoom()
 	base := room.BasicRoom()
 	words := strings.Split(command, " ")
@@ -77,7 +80,7 @@ func executeCommand(game Adventurer, command string) string {
 			return game.Navigate(base.West, "w")
 		case "look", "l":
 			return room.Look() + room.OnAction(LOOK)
-		case "examine", "x":
+		case "examine", "x", "search":
 			return game.DoItemAction(words[i+1:], EXAMINE)
 		case "open":
 			return game.DoItemAction(words[i+1:], OPEN)
@@ -91,10 +94,10 @@ func executeCommand(game Adventurer, command string) string {
 			return game.DoItemAction(words[i+1:], PUT)
 		case "use":
 			return game.DoItemAction(words[i+1:], USE)
-		case "ask", "tell":
+		case "ask", "tell", "talk":
 			return game.DoActorAction(words[i+1:], ASK) + room.OnAction(ASK)
 
-		case "give":
+		case "give", "show":
 			return game.DoItemAction(words[i+1:], GIVE)
 
 		case "help":
@@ -148,10 +151,10 @@ func (game *Game) DoActorAction(words []string, action *Action) string {
 	if action.IsTopicRequired {
 		for _, topic := range findTopics(words, actor) {
 			if strings.Contains(topic.Action, action.Name) {
-				return actor.OnTopic(topic, action)
+				return actor.OnTopic(topic, action, nil)
 			}
 		}
-		return actor.OnTopic(nil, action)
+		return actor.OnTopic(nil, action, nil)
 	}
 
 	if action.Syntax != "" {
@@ -222,14 +225,14 @@ func (game *Game) DoItemAction(words []string, action *Action) string {
 		if action.IsTopicRequired {
 			for _, topic := range findTopics(strings.Split(item.Basic().Name, " "), actor) {
 				if strings.Contains(topic.Action, action.Name) {
-					msg = actor.OnTopic(topic, action)
-					if action.IsItemConsumed {
+					if topic.IsItemConsumed {
 						game.ChangeParent(item, "")
 					}
+					msg = actor.OnTopic(topic, action, item)
 					return msg
 				}
 			}
-			return actor.OnTopic(nil, action)
+			return actor.OnTopic(nil, action, item)
 		}
 
 		return game.finalizeItemAction(item, actor, action)
@@ -269,13 +272,13 @@ func (game *Game) ChangeParent(item Itemer, parentName string) {
 	//remove from previous owner
 	if item.Basic().Location == "inventory" {
 		for idx, check := range game.Inventory {
-			if item == check {
+			if item.Basic().Name == check.Basic().Name {
 				game.Inventory = append(game.Inventory[:idx], game.Inventory[idx+1:]...)
 				break
 			}
 		}
 	} else {
-		parent, idx := findParent(item, room.Items)
+		parent, idx := findParent(item, append(room.Items, game.Inventory...))
 
 		if parent != nil {
 			parent.Items = append(parent.Items[:idx], parent.Items[idx+1:]...)
@@ -289,9 +292,14 @@ func (game *Game) ChangeParent(item Itemer, parentName string) {
 	if parentName == "inventory" {
 		game.Inventory = append(game.Inventory, item)
 	} else if parentName != "" {
-		_, parent, _ := findTarget([]string{parentName}, visibleItems(room.Items, false, true), true)
+		_, parent, _ := findTarget([]string{parentName}, append(visibleItems(room.Items, false, true), game.Inventory...), true)
 		if parent != nil {
 			parent.Basic().Items = append(parent.Basic().Items, item)
+		} else {
+			room := game.Rooms[parentName]
+			if room != nil {
+				room.BasicRoom().Items = append(room.BasicRoom().Items, item)
+			}
 		}
 	}
 
@@ -310,8 +318,12 @@ func (game *Game) Navigate(location string, dir string) string {
 			}
 			return msg
 		}
+		room = game.Rooms[location]
+		if room.BasicRoom().Locked != "" {
+			return room.BasicRoom().Locked
+		}
 		game.Location = location
-		room = game.Rooms[game.Location]
+
 		return msg + room.EnterRoom(location)
 	}
 	return "You can't go that way."
@@ -342,6 +354,6 @@ func (game *Game) ShowInventory() string {
 //Help - displays keywords
 func (game *Game) Help() string {
 	return `Navigation: (n)orth, (s)outh, (e)ast, (w)est.
-	Useful verbs: look, examine, take, put [item] on [item], open, close, unlock [item] with [item].
-	Characters: ask [person] about [topic], give [item] to person`
+Useful verbs: (l)ook, e(x)amine, take, open, close, put _ on _, unlock _ with _
+Characters: ask _ about _, give _ to _`
 }

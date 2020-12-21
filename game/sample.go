@@ -74,7 +74,7 @@ type witch struct {
 	game *engine.Game
 }
 
-func (person *witch) OnTopic(topic *engine.Topic, action *engine.Action) string {
+func (person *witch) OnTopic(topic *engine.Topic, action *engine.Action, item engine.Itemer) string {
 
 	if action.Name == "give" {
 		if topic != nil && topic.Vocab == "gold skull" {
@@ -101,7 +101,7 @@ func (person *witch) OnTopic(topic *engine.Topic, action *engine.Action) string 
 		}
 	}
 
-	return person.BasicPerson().OnTopic(topic, action) + msg
+	return person.BasicPerson().OnTopic(topic, action, item) + msg
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ func Sample() *SampleGame {
 
 							{
 								Action:  "ask",
-								Vocab:   "help skull",
+								Vocab:   "help skull talk",
 								Answers: []string{"\"Bring me the skull from the cave! But be careful, be sure to put something on the pedestal before taking the skull!\""}},
 							{
 								Action:  "ask",
@@ -152,7 +152,7 @@ func Sample() *SampleGame {
 						Item: engine.Item{
 							Name:      "mysterious woman",
 							Vocab:     "girl woman witch melissa",
-							Desc:      "[[img=https://images.sex.com/images/pinporn/2016/10/20/620/16760796.jpg]]You see a mysterious woman in dark clothes.\n\"Hey, can we talk?\", she asks.",
+							Desc:      "[[img=https://www.elliottsfancydress.co.uk/media/catalog/product/cache/1/image/363x/040ec09b1e35df139433887a97daa66f/w/i/witch_1.jpg]]You see a mysterious woman in dark clothes.\n\"Hey, can we talk? I need your help!\", she asks.",
 							IsVisible: true},
 						NameEx: "Mysterious beautiful woman"}},
 				&engine.Item{

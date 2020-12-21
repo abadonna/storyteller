@@ -7,7 +7,7 @@ import (
 //Actor interface
 type Actor interface {
 	Itemer
-	OnTopic(topic *Topic, action *Action) string
+	OnTopic(topic *Topic, action *Action, item Itemer) string
 	BasicPerson() *Person
 }
 
@@ -23,15 +23,16 @@ type Person struct {
 
 //Topic for interaction with Actor
 type Topic struct {
-	Action        string
-	IsUsed        bool
-	Vocab         string
-	Answers       []string
-	RepeatAnswers []string
+	Action         string
+	IsUsed         bool
+	Vocab          string
+	Answers        []string
+	RepeatAnswers  []string
+	IsItemConsumed bool
 }
 
 //OnTopic - actor's reaction on topic actions
-func (person *Person) OnTopic(topic *Topic, action *Action) string {
+func (person *Person) OnTopic(topic *Topic, action *Action, item Itemer) string {
 	if topic == nil {
 		count := len(person.DefaultAnswers[action.Name])
 		if count > 0 {

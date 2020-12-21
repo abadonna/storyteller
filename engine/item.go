@@ -6,14 +6,16 @@ import (
 
 //Item - basic item structure
 type Item struct {
-	IsDecoration bool
-	IsSurface    bool
-	IsContainer  bool
-	IsPickable   bool
-	IsVisible    bool
-	IsDisabled   bool
-	IsOpen       bool
-	IsLocked     bool
+	IsDecoration      bool
+	IsSurface         bool
+	IsContainer       bool
+	IsPickable        bool
+	IsVisible         bool
+	IsDisabled        bool
+	IsOpen            bool
+	IsLocked          bool
+	IsUnbreakableName bool
+	IsUseTarget       bool
 
 	Name     string
 	AName    string
@@ -21,6 +23,9 @@ type Item struct {
 	Vocab    string
 	Location string
 	KeyName  string
+
+	DefaultActionDesc map[string]string
+	CanContainOnly    []string
 
 	Items []Itemer
 }
@@ -55,6 +60,8 @@ func (item *Item) OnAction(action *Action, target Itemer) (string, string) {
 		return item.Examine(), item.Location
 	case OPEN:
 		return item.Open(), item.Location
+	case CLOSE:
+		return item.Close(), item.Location
 	case TAKE:
 		return item.Take()
 	case PUT:
@@ -65,7 +72,7 @@ func (item *Item) OnAction(action *Action, target Itemer) (string, string) {
 		return item.Use(target), item.Location
 	}
 
-	return "", "You can't " + action.Name + " " + item.NameWithArticle() + "."
+	return "You can't " + action.Name + " " + item.NameWithArticle() + ".", item.Location
 }
 
 //Examine item
@@ -99,7 +106,13 @@ func (item *Item) Examine() string {
 
 //Open container item
 func (item *Item) Open() string {
+
+	msg, ok := item.DefaultActionDesc["open"]
+
 	if !item.IsContainer {
+		if ok {
+			return msg
+		}
 		return "I don't know how to open " + item.NameWithArticle()
 	}
 
@@ -117,7 +130,11 @@ func (item *Item) Open() string {
 		item.IsVisible = true
 	}
 
-	return "Opened." + notifyAboutVisibleItems(item.Items, " in "+item.NameWithArticle())
+	if !ok {
+		msg = "Opened."
+	}
+
+	return msg + notifyAboutVisibleItems(item.Items, " in "+item.NameWithArticle())
 }
 
 //Close container item
@@ -136,17 +153,30 @@ func (item *Item) Close() string {
 		item.IsVisible = false
 	}
 
-	return "Closed."
+	msg, ok := item.DefaultActionDesc["close"]
+	if !ok {
+		msg = "Closed."
+	}
+
+	return msg
 }
 
 //Take item into inventory
 func (item *Item) Take() (string, string) {
+	if item.Location == "inventory" {
+		return "You already have it.", item.Location
+	}
+
+	msg, ok := item.DefaultActionDesc["take"]
 	if !item.IsPickable {
+		if ok {
+			return msg, item.Location
+		}
 		return "You can't take it.", item.Location
 	}
 
-	if item.Location == "inventory" {
-		return "You already have it.", item.Location
+	if ok {
+		return msg, "inventory"
 	}
 
 	return "Taken.", "inventory"
@@ -163,9 +193,22 @@ func (item *Item) Put(target Itemer) (string, string) {
 	indirect := target.Basic()
 	if indirect.IsContainer {
 		if indirect.IsOpen {
+
+			cancontain := len(indirect.CanContainOnly) == 0
+			for _, s := range indirect.CanContainOnly {
+				if item.Name == s {
+					cancontain = true
+					break
+				}
+			}
+
+			if !cancontain {
+				return "You can't put " + item.NameWithArticle() + " in " + target.NameWithArticle() + ".", item.Location
+			}
+
 			return "You put " + item.NameWithArticle() + " in " + target.NameWithArticle() + ".", indirect.Name
 		}
-		return strings.Title(target.NameWithArticle() + "is closed."), item.Location
+		return strings.Title(target.NameWithArticle() + " is closed."), item.Location
 	}
 	if indirect.IsSurface {
 		return "You put " + item.NameWithArticle() + " on " + target.NameWithArticle() + ".", indirect.Name
@@ -196,6 +239,12 @@ func (item *Item) Unlock(target Itemer) string {
 
 //Use item
 func (item *Item) Use(target Itemer) string {
+
+	if item.IsUseTarget && target != nil && !target.Basic().IsUseTarget {
+		msg, _ := target.OnAction(USE, item)
+		return msg
+	}
+
 	if target != nil {
 		box := target.Basic()
 		if box.IsContainer &&
@@ -207,5 +256,10 @@ func (item *Item) Use(target Itemer) string {
 		}
 	}
 
-	return "You can't use it."
+	msg, ok := item.DefaultActionDesc["use"]
+	if !ok {
+		return "You can't use it."
+	}
+
+	return msg
 }

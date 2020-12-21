@@ -23,6 +23,7 @@ func notifyAboutVisibleItems(items []Itemer, location string) string {
 	msg := []string{}
 	actors := []string{}
 	visible := visibleItems(items, true, false)
+	count := 0
 
 	for i, item := range visible {
 		actor, ok := item.(Actor)
@@ -31,7 +32,7 @@ func notifyAboutVisibleItems(items []Itemer, location string) string {
 			continue
 		}
 
-		if i == 0 {
+		if count == 0 {
 			msg = append(msg, "\nYou see ")
 		} else if i == len(visible)-1 {
 			msg = append(msg, " and ")
@@ -39,6 +40,7 @@ func notifyAboutVisibleItems(items []Itemer, location string) string {
 			msg = append(msg, ", ")
 		}
 		msg = append(msg, item.NameWithArticle())
+		count += 1
 	}
 
 	if len(msg) > 0 {
@@ -69,8 +71,8 @@ func findItemsInList(words []string, items []Itemer) ([]Itemer, []string) {
 
 	target := []string{}
 
-	for _, word := range words {
-		if ignore[word] {
+	for idx, word := range words {
+		if ignore[word] && len(target) == 0 {
 			continue
 		}
 
@@ -78,8 +80,20 @@ func findItemsInList(words []string, items []Itemer) ([]Itemer, []string) {
 		possible := []Itemer{}
 		for _, i := range items {
 			item := i.Basic()
-			match, _ := regexp.MatchString("(^| )"+word+"( |$)",
-				strings.ToLower(item.Vocab+" "+item.Name))
+			match := false
+
+			if item.IsUnbreakableName {
+				match, _ = regexp.MatchString("(^| )"+word+"( |$)", strings.ToLower(item.Vocab))
+				t := strings.Join(words[idx:], " ")
+				if len(target) > 0 {
+					t = strings.Join(target, " ") + " " + t
+				}
+				match = match || strings.HasPrefix(t, strings.ToLower(item.Name))
+
+			} else {
+				match, _ = regexp.MatchString("(^| )"+word+"( |$)",
+					strings.ToLower(item.Vocab+" "+item.Name))
+			}
 
 			if match {
 				if isEnd {

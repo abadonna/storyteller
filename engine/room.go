@@ -8,6 +8,8 @@ type Room struct {
 	East  string
 	West  string
 
+	Locked string
+
 	IsVisited bool
 
 	Items []Itemer

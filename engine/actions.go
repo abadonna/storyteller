@@ -2,13 +2,13 @@ package engine
 
 //Action -
 type Action struct {
-	Name               string
-	IsItemRequired     bool
-	IsTargetRequired   bool
-	IsActorRequired    bool
-	IsActorTarget      bool
-	IsTopicRequired    bool
-	IsItemConsumed     bool
+	Name             string
+	IsItemRequired   bool
+	IsTargetRequired bool
+	IsActorRequired  bool
+	IsActorTarget    bool
+	IsTopicRequired  bool
+
 	IsPredefined       bool //should be false for any user defined actions!
 	Syntax             string
 	DefaultTopicAnswer string
@@ -84,6 +84,5 @@ var GIVE = &Action{
 	IsItemRequired:     true,
 	IsActorTarget:      true,
 	IsTopicRequired:    true,
-	IsItemConsumed:     true,
 	DefaultTopicAnswer: "\"I don't don't need it.\"",
 	IsPredefined:       true}

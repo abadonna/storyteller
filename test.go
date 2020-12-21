@@ -10,7 +10,7 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-func mainConsole() {
+func main() {
 	context := game.Sample()
 	fmt.Println(aurora.Faint(context.Intro()))
 
