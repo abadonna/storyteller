@@ -84,5 +84,5 @@ var GIVE = &Action{
 	IsItemRequired:     true,
 	IsActorTarget:      true,
 	IsTopicRequired:    true,
-	DefaultTopicAnswer: "\"I don't don't need it.\"",
+	DefaultTopicAnswer: "\"I don't need it.\"",
 	IsPredefined:       true}
